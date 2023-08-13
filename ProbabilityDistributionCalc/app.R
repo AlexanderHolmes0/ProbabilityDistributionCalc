@@ -253,14 +253,14 @@ server <- function(input, output) {
     if (input$Cquestion == "Between") {
       list(
         numericRangeInput("Cquest_range",
-                          label = "Range", value = c(0, 10)
+                          label = "Range", value = c(0, 10),step = 0.01
         )
       )
     } else {
       list(
         numericInput("Cquest_range",
                      label = "Value",
-                     value = c(5)
+                     value = c(5),step = 0.01
         )
         
       )
@@ -269,7 +269,9 @@ server <- function(input, output) {
   
   output$Cans <- renderPrint({
     req(input$Cquest_range)
-    print(C_CDF())
+    req(input$C_CDF)
+    cdf <- input$C_CDF
+    C_CDF <- \(x) eval(parse(text = cdf))
     if(input$Cquestion == "Between"){
       C_CDF(input$Cquest_range[2]) - C_CDF(input$Cquest_range[1])
     }else if(input$Cquestion == "Above"){
