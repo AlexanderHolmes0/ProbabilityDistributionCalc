@@ -73,7 +73,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Dans"),
-          submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
+          #submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
         ),
         mainPanel(
           plotOutput("DfunPlot", height = "250"),
@@ -125,7 +125,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Cans"),
-          submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
+          #submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
         ),
         mainPanel(
           plotOutput("Cfun_Plot", height = "250"),
