@@ -43,7 +43,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
         sidebarPanel(
           textInput("Dfun",
             label = "Original Function",
-            placeholder = "Function"
+            placeholder = "Function | Try x*(12-x)"
           ),
           textInput("D_PMF",
             label = "Probability Mass Function (Populates if Valid PMF)",
@@ -73,7 +73,9 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Dans"),
-          #submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
+         actionButton(inputId = 'discrete',
+                      label = "Calculate!",
+                      icon = icon('magnifying-glass-chart'))
         ),
         mainPanel(
           plotOutput("DfunPlot", height = "250"),
@@ -125,7 +127,9 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Cans"),
-          #submitButton(text = "Calculate!", icon = icon('magnifying-glass-chart'))
+          actionButton(inputId = 'continuous',
+                       label = "Calculate!",
+                       icon = icon('magnifying-glass-chart'))
         ),
         mainPanel(
           plotOutput("Cfun_Plot", height = "250"),
@@ -245,7 +249,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             value = c(5, 10)
           )
         ),
-        # column(8,textOutput("unifPMF"))
+        
         column(8, plotOutput("unifPDF"))
       ),
       hr(),
@@ -345,11 +349,10 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   DFun <- reactive({
-    req(input$Dfun)
-    req(input$D_Range)
-
-    shape <- input$Dfun
-    x <- input$D_Range[1]:input$D_Range[2]
+   req(input$discrete)
+    
+    shape <- isolate(input$Dfun)
+    x <- isolate(input$D_Range[1]:input$D_Range[2])
 
     shape <- parse(text = shape)
     shape <- eval(shape)
@@ -398,12 +401,12 @@ server <- function(input, output) {
 
 
   output$DfunPlot <- renderPlot({
-    req(DFun()$x)
-    barplot(DFun()$shape, names.arg = DFun()$x, main = "Original Function Plot")
+    req(DFun()$shape)
+    barplot(isolate(DFun()$shape), names.arg = DFun()$x, main = "Original Function Plot")
   })
 
   output$D_PMF_Plot <- renderPlot({
-    req(DFun()$x)
+    req(D_PMF())
     barplot(D_PMF(), names.arg = DFun()$x, main = "Valid PMF Plot")
   })
 
@@ -485,7 +488,7 @@ server <- function(input, output) {
 
 
   output$questionNumC <- renderUI({
-    req(C_CDF())
+
     if (input$Cquestion == "Between") {
       list(
         numericRangeInput("Cquest_range",
@@ -517,55 +520,73 @@ server <- function(input, output) {
   })
 
   CFun <- reactive({
-    req(input$C_Fun)
-    C_Fun <- input$C_Fun
+
+    req(input$continuous)
+    C_Fun <- isolate(input$C_Fun)
+    if(C_Fun != ""){
     \(x) eval(parse(text = C_Fun))
+    }else{
+      NULL
+    }
   })
 
   C_PDF <- reactive({
-    req(input$C_PDF)
-    C_PDF <- input$C_PDF
+    req(input$continuous)
+
+    C_PDF <- isolate(input$C_PDF)
+    if(C_PDF!=""){
     \(x) eval(parse(text = C_PDF))
+    }else {
+      NULL
+    }
   })
 
   output$area <- renderPrint({
-    req(CFun())
+    req(input$continuous)
+    if(!is.null(CFun())){
     paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val)
+    }
   })
 
   output$PDFarea <- renderPrint({
-    req(input$C_PDF)
+    req(input$continuous)
+    if(!is.null(C_PDF())){
     paste("Area Under PDF Curve:", integrate(C_PDF(), input$C_Range[1], input$C_Range[2])$val)
+    }
   })
   output$Cmean <- renderText({
-    req(input$C_PDF)
-
-    C_PDF <- input$C_PDF
+    req(input$continuous)
+    if(!is.null(C_PDF())){
+    C_PDF <- isolate(input$C_PDF)
     paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+    }
   })
 
   output$Csd <- renderText({
-    req(input$C_PDF)
-    C_PDF <- input$C_PDF
+    req(input$continuous)
+    if(!is.null(C_PDF())){
+    C_PDF <- isolate(input$C_PDF)
     muC <- integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val
     paste("Standard Deviation:", integrate(\(x)  (x - muC)^2 * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+    }
   })
 
   output$Cmode <- renderText({
-    req(C_PDF)
+    if(!is.null(C_PDF())){
     paste("Mode:", optimize(C_PDF(), interval = c(input$C_Range[1], input$C_Range[2]), maximum = TRUE)$maximum)
+    }
   })
 
   C_CDF <- reactive({
+    req(input$continuous)
     if (input$C_PDF != "") {
-      req(input$C_PDF)
+      req(C_PDF())
       cdf <- deparse(yac_expr(paste0("Integrate(x,", input$C_Range[1], ",x) ", noquote(input$C_PDF)))[[1]])
       updateTextInput(inputId = "C_CDF", value = cdf)
       CDF_FUN <- \(x) eval(parse(text = cdf))
       CDF_FUN
     } else if (input$C_PDF == "") {
       req(input$C_CDF)
-
       pdf <- deparse(yac_expr(paste0("D(x)", noquote(input$C_CDF)))[[1]])
       updateTextInput(inputId = "C_PDF", value = pdf)
       CDF_FUN <- \(x) eval(parse(text = input$C_CDF))
@@ -574,36 +595,38 @@ server <- function(input, output) {
   })
 
   output$Cfun_Plot <- renderPlot({
-    req(CFun())
-    req(input$C_Fun)
-
-    C1 <- input$C_Fun
+    req(input$continuous)
+    C1 <- isolate(input$C_Fun)
 
     C_funs <- \(x) eval(parse(text = C1))
-
+    if(!is.null(CFun())){
     curve(C_funs, from = input$C_Range[1], to = input$C_Range[2], ylab = "Function", main = "Original Function")
+    }
   })
 
   output$C_PDF_Plot <- renderPlot({
-    req(input$C_PDF)
-    C2 <- input$C_PDF
+    req(input$continuous)
+    C2 <- isolate(input$C_PDF)
 
     C_pdfs <- \(x) eval(parse(text = C2))
-
+    if(!is.null(C_PDF())){
     curve(C_pdfs, from = input$C_Range[1], to = input$C_Range[2], ylab = "PDF", main = "PDF")
+    }
   })
 
   output$C_CDF_Plot <- renderPlot({
-    req(C_CDF())
-    req(input$C_CDF)
-    C_CDF1 <- \(x) eval(parse(text = input$C_CDF))
+req(C_CDF())
+    req(input$continuous)
+if(input$C_CDF != ""){
+    C3 <- input$C_CDF
+    C_CDF1 <- \(x) eval(parse(text = C3))
 
     curve(C_CDF1, from = input$C_Range[1], to = input$C_Range[2], ylab = "CDF", main = "CDF")
+}
   })
 
 
-
-  #---------------------------PETRIE SERVER CODE BELOW---------------------------------
+#---------------------------PETRIE SERVER CODE BELOW----------------------------
 
   tableData <- reactiveVal(data.frame(x = 1:10, y = LETTERS[1:10]))
   plotData <- reactiveVal()
