@@ -3,8 +3,9 @@ library(shinyWidgets)
 library(Ryacas)
 library(plotly)
 ui <- fluidPage(
-  tags$head(HTML(
-    '<!-- Quick & Dirty HTML Meta Tags -->
+  tags$head(
+    HTML(
+      '<!-- Quick & Dirty HTML Meta Tags -->
 <title>Probability Distribution Calculator</title>
 <meta name="description" content="Easily explore and calculate probabilities!">
 
@@ -30,9 +31,10 @@ ui <- fluidPage(
 <meta name="twitter:url" content="https://aholmes25.shinyapps.io/ProbabilityDistributionCalc/">
 <meta name="twitter:title" content="Probability Distribution Calculator">
 <meta name="twitter:description" content="Easily explore and calculate probabilities!">
-<meta name="twitter:image" content="https://media1.giphy.com/media/l378c04F2fjeZ7vH2/giphy.gif?cid=ecf05e47mljfvaz4iiraroizmm0ohbwjkf6ns0qu5649no2d&ep=v1_gifs_search&rid=giphy.gif&ct=g">'),
-
-tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Part%20Alternation%20Mark.png")),
+<meta name="twitter:image" content="https://media1.giphy.com/media/l378c04F2fjeZ7vH2/giphy.gif?cid=ecf05e47mljfvaz4iiraroizmm0ohbwjkf6ns0qu5649no2d&ep=v1_gifs_search&rid=giphy.gif&ct=g">'
+    ),
+    tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Part%20Alternation%20Mark.png")
+  ),
   # Application title
   titlePanel("Probability Distribution Circus"),
   tabsetPanel(
@@ -73,9 +75,11 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Dans"),
-         actionButton(inputId = 'discrete',
-                      label = "Calculate!",
-                      icon = icon('magnifying-glass-chart'))
+          actionButton(
+            inputId = "discrete",
+            label = "Calculate!",
+            icon = icon("magnifying-glass-chart")
+          )
         ),
         mainPanel(
           plotOutput("DfunPlot", height = "250"),
@@ -90,7 +94,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
         sidebarPanel(
           textInput("C_Fun",
             label = "Original Function",
-            placeholder = "Function"
+            placeholder = "Function | Try x*(12-x)"
           ),
           textInput("C_PDF",
             label = "Probability Density Function",
@@ -127,9 +131,11 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             )
           ),
           verbatimTextOutput("Cans"),
-          actionButton(inputId = 'continuous',
-                       label = "Calculate!",
-                       icon = icon('magnifying-glass-chart'))
+          actionButton(
+            inputId = "continuous",
+            label = "Calculate!",
+            icon = icon("magnifying-glass-chart")
+          )
         ),
         mainPanel(
           plotOutput("Cfun_Plot", height = "250"),
@@ -249,7 +255,6 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
             value = c(5, 10)
           )
         ),
-        
         column(8, plotOutput("unifPDF"))
       ),
       hr(),
@@ -349,8 +354,8 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   DFun <- reactive({
-   req(input$discrete)
-    
+    req(input$discrete)
+
     shape <- isolate(input$Dfun)
     x <- isolate(input$D_Range[1]:input$D_Range[2])
 
@@ -365,12 +370,11 @@ server <- function(input, output) {
     }
     shape <- DFun()$shape
 
-    if (round(sum(shape),2) == 1) {
+    if (round(sum(shape), 2) == 1) {
       updateTextInput(inputId = "D_PMF", value = input$Dfun)
-    } else if(sum(shape) != 1){
+    } else if (sum(shape) != 1) {
       shape <- shape / sum(shape)
       updateTextInput(inputId = "D_PMF", value = "Shape has been scaled")
-
     }
     shape
   })
@@ -402,12 +406,12 @@ server <- function(input, output) {
 
   output$DfunPlot <- renderPlot({
     req(DFun()$shape)
-    barplot(isolate(DFun()$shape), names.arg = DFun()$x, main = "Original Function Plot")
+    barplot(isolate(DFun()$shape), names.arg = DFun()$x, main = "Original Function")
   })
 
   output$D_PMF_Plot <- renderPlot({
     req(D_PMF())
-    barplot(D_PMF(), names.arg = DFun()$x, main = "Valid PMF Plot")
+    barplot(D_PMF(), names.arg = DFun()$x, main = "PMF")
   })
 
   output$D_CDF_Plot <- renderPlot({
@@ -421,7 +425,7 @@ server <- function(input, output) {
       ylim = c(0, 1),
       xlab = "x",
       ylab = "Probability",
-      main = "Valid CDF Plot"
+      main = "CDF"
     )
 
     points(x = x[-n], y = Fx[-1], pch = 19)
@@ -488,7 +492,6 @@ server <- function(input, output) {
 
 
   output$questionNumC <- renderUI({
-
     if (input$Cquestion == "Between") {
       list(
         numericRangeInput("Cquest_range",
@@ -520,12 +523,11 @@ server <- function(input, output) {
   })
 
   CFun <- reactive({
-
     req(input$continuous)
     C_Fun <- isolate(input$C_Fun)
-    if(C_Fun != ""){
-    \(x) eval(parse(text = C_Fun))
-    }else{
+    if (C_Fun != "") {
+      \(x) eval(parse(text = C_Fun))
+    } else {
       NULL
     }
   })
@@ -534,60 +536,63 @@ server <- function(input, output) {
     req(input$continuous)
 
     C_PDF <- isolate(input$C_PDF)
-    if(C_PDF!=""){
-    \(x) eval(parse(text = C_PDF))
-    }else {
+    if (C_PDF != "") {
+      \(x) eval(parse(text = C_PDF))
+    } else {
       NULL
     }
   })
 
   output$area <- renderPrint({
     req(input$continuous)
-    if(!is.null(CFun())){
-    paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val)
+    if (!is.null(CFun())) {
+      paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val)
     }
   })
 
   output$PDFarea <- renderPrint({
     req(input$continuous)
-    if(!is.null(C_PDF())){
-    paste("Area Under PDF Curve:", integrate(C_PDF(), input$C_Range[1], input$C_Range[2])$val)
+    if (!is.null(C_PDF())) {
+      paste("Area Under PDF Curve:", integrate(C_PDF(), input$C_Range[1], input$C_Range[2])$val)
     }
   })
+
   output$Cmean <- renderText({
     req(input$continuous)
-    if(!is.null(C_PDF())){
-    C_PDF <- isolate(input$C_PDF)
-    paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+    if (!is.null(C_PDF())) {
+      C_PDF <- isolate(input$C_PDF)
+      paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
     }
   })
 
   output$Csd <- renderText({
     req(input$continuous)
-    if(!is.null(C_PDF())){
-    C_PDF <- isolate(input$C_PDF)
-    muC <- integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val
-    paste("Standard Deviation:", integrate(\(x)  (x - muC)^2 * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+    if (!is.null(C_PDF())) {
+      C_PDF <- isolate(input$C_PDF)
+      muC <- integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val
+      paste("Standard Deviation:", integrate(\(x)  (x - muC)^2 * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
     }
   })
 
   output$Cmode <- renderText({
-    if(!is.null(C_PDF())){
-    paste("Mode:", optimize(C_PDF(), interval = c(input$C_Range[1], input$C_Range[2]), maximum = TRUE)$maximum)
+    if (!is.null(C_PDF())) {
+      paste("Mode:", optimize(C_PDF(), interval = c(input$C_Range[1], input$C_Range[2]), maximum = TRUE)$maximum)
     }
   })
 
   C_CDF <- reactive({
     req(input$continuous)
-    if (input$C_PDF != "") {
+
+    if (isolate(input$C_PDF) != "") {
       req(C_PDF())
-      cdf <- deparse(yac_expr(paste0("Integrate(x,", input$C_Range[1], ",x) ", noquote(input$C_PDF)))[[1]])
+
+      cdf <- deparse(yac_expr(paste0("Integrate(x,", input$C_Range[1], ",x) ", noquote(isolate(input$C_PDF))))[[1]])
       updateTextInput(inputId = "C_CDF", value = cdf)
       CDF_FUN <- \(x) eval(parse(text = cdf))
       CDF_FUN
-    } else if (input$C_PDF == "") {
+    } else if (isolate(input$C_PDF) == "") {
       req(input$C_CDF)
-      pdf <- deparse(yac_expr(paste0("D(x)", noquote(input$C_CDF)))[[1]])
+      pdf <- deparse(yac_expr(paste0("D(x)", noquote(isolate(input$C_CDF))))[[1]])
       updateTextInput(inputId = "C_PDF", value = pdf)
       CDF_FUN <- \(x) eval(parse(text = input$C_CDF))
       CDF_FUN
@@ -599,8 +604,8 @@ server <- function(input, output) {
     C1 <- isolate(input$C_Fun)
 
     C_funs <- \(x) eval(parse(text = C1))
-    if(!is.null(CFun())){
-    curve(C_funs, from = input$C_Range[1], to = input$C_Range[2], ylab = "Function", main = "Original Function")
+    if (!is.null(CFun())) {
+      curve(C_funs, from = input$C_Range[1], to = input$C_Range[2], ylab = "Function", main = "Original Function")
     }
   })
 
@@ -609,24 +614,25 @@ server <- function(input, output) {
     C2 <- isolate(input$C_PDF)
 
     C_pdfs <- \(x) eval(parse(text = C2))
-    if(!is.null(C_PDF())){
-    curve(C_pdfs, from = input$C_Range[1], to = input$C_Range[2], ylab = "PDF", main = "PDF")
+    if (!is.null(C_PDF())) {
+      curve(C_pdfs, from = input$C_Range[1], to = input$C_Range[2], ylab = "PDF", main = "PDF")
     }
   })
 
   output$C_CDF_Plot <- renderPlot({
-req(C_CDF())
-    req(input$continuous)
-if(input$C_CDF != ""){
-    C3 <- input$C_CDF
-    C_CDF1 <- \(x) eval(parse(text = C3))
 
-    curve(C_CDF1, from = input$C_Range[1], to = input$C_Range[2], ylab = "CDF", main = "CDF")
-}
+    req(input$continuous)
+    C3 <- input$C_CDF
+    if (!is.null(C_CDF())) {
+      
+      C_CDF1 <- \(x) eval(parse(text = C3))
+
+      curve(C_CDF1, from = input$C_Range[1], to = input$C_Range[2], ylab = "CDF", main = "CDF")
+    }
   })
 
 
-#---------------------------PETRIE SERVER CODE BELOW----------------------------
+  #---------------------------PETRIE SERVER CODE BELOW----------------------------
 
   tableData <- reactiveVal(data.frame(x = 1:10, y = LETTERS[1:10]))
   plotData <- reactiveVal()
