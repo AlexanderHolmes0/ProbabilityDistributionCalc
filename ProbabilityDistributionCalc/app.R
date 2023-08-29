@@ -33,7 +33,8 @@ ui <- fluidPage(
 <meta name="twitter:description" content="Easily explore and calculate probabilities!">
 <meta name="twitter:image" content="https://media1.giphy.com/media/l378c04F2fjeZ7vH2/giphy.gif?cid=ecf05e47mljfvaz4iiraroizmm0ohbwjkf6ns0qu5649no2d&ep=v1_gifs_search&rid=giphy.gif&ct=g">'
     ),
-    tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Part%20Alternation%20Mark.png")
+    tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Part%20Alternation%20Mark.png"),
+    tags$style(".shiny-output-error{color: grey;}")
   ),
   # Application title
   titlePanel("Probability Distribution Circus"),
@@ -359,8 +360,9 @@ server <- function(input, output) {
     shape <- isolate(input$Dfun)
     x <- isolate(input$D_Range[1]:input$D_Range[2])
 
-    shape <- parse(text = shape)
-    shape <- eval(shape)
+    tryCatch(shape <- eval(parse(text = shape)),
+             error=function(e) stop("Transcription Error"))
+   
     list(shape = shape, x = x)
   })
 
@@ -370,7 +372,7 @@ server <- function(input, output) {
     }
     shape <- DFun()$shape
 
-    if (round(sum(shape), 2) == 1) {
+    if (round(sum(shape), 3) == 1) {
       updateTextInput(inputId = "D_PMF", value = input$Dfun)
     } else if (sum(shape) != 1) {
       shape <- shape / sum(shape)
@@ -389,18 +391,22 @@ server <- function(input, output) {
 
   output$Dmean <- renderText({
     req(DFun()$x)
-    paste("Mean:", sum(DFun()$x * D_PMF()))
+    tryCatch(paste("Mean:", sum(DFun()$x * D_PMF())),
+            error=function(e) print("Transcription Error"))
   })
 
   output$Dsd <- renderText({
     req(DFun()$x)
     mu <- sum(DFun()$x * D_PMF())
-    paste("Standard Deviation:", sqrt(sum((DFun()$x - mu)^2 * D_PMF())))
+             
+  paste("Standard Deviation:", sqrt(sum((DFun()$x - mu)^2 * D_PMF())))
+            
   })
 
   output$Dmode <- renderText({
     req(DFun()$x)
     paste("Mode:", DFun()$x[which.max(D_PMF())])
+             
   })
 
 
@@ -511,14 +517,13 @@ server <- function(input, output) {
   output$Cans <- renderPrint({
     req(input$Cquest_range)
     req(input$C_CDF)
-    cdf <- input$C_CDF
-    C_CDF <- \(x) eval(parse(text = cdf))
+    C_CDF <- \(x) eval(parse(text = isolate(input$C_CDF)))
     if (input$Cquestion == "Between") {
-      C_CDF(input$Cquest_range[2]) - C_CDF(input$Cquest_range[1])
+      tryCatch(C_CDF(input$Cquest_range[2]) - C_CDF(input$Cquest_range[1]),error=function(e) print("Transcription Error"))
     } else if (input$Cquestion == "Above") {
-      1 - C_CDF(input$Cquest_range)
+      tryCatch(1 - C_CDF(input$Cquest_range), error=function(e) print("Transcription Error"))
     } else if (input$Cquestion == "Below") {
-      C_CDF(input$Cquest_range)
+      tryCatch(C_CDF(input$Cquest_range), error = function(e) print("Transcription Error"))
     }
   })
 
@@ -546,37 +551,44 @@ server <- function(input, output) {
   output$area <- renderPrint({
     req(input$continuous)
     if (!is.null(CFun())) {
-      paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val)
+     tryCatch( paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val),
+               error = function(e) print("Transcription Error"))
     }
   })
 
   output$PDFarea <- renderPrint({
     req(input$continuous)
     if (!is.null(C_PDF())) {
-      paste("Area Under PDF Curve:", integrate(C_PDF(), input$C_Range[1], input$C_Range[2])$val)
+      tryCatch(paste("Area Under PDF Curve:", integrate(C_PDF(), input$C_Range[1], input$C_Range[2])$val),
+               error = function(e) print("Transcription Error"))
     }
   })
 
-  output$Cmean <- renderText({
+  output$Cmean <- renderPrint({
     req(input$continuous)
     if (!is.null(C_PDF())) {
       C_PDF <- isolate(input$C_PDF)
-      paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+      tryCatch(paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val),
+               error = function(e) print("Transcription Error"))
     }
   })
 
-  output$Csd <- renderText({
+  output$Csd <- renderPrint({
     req(input$continuous)
     if (!is.null(C_PDF())) {
       C_PDF <- isolate(input$C_PDF)
-      muC <- integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val
-      paste("Standard Deviation:", integrate(\(x)  (x - muC)^2 * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val)
+      muC <- tryCatch(integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val,
+                      error = function(e) print("Transcription Error"))
+      
+      tryCatch(paste("Standard Deviation:", integrate(\(x)  (x - muC)^2 * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val),
+               error = function(e) print("Transcription Error"))
     }
   })
 
-  output$Cmode <- renderText({
+  output$Cmode <- renderPrint({
     if (!is.null(C_PDF())) {
-      paste("Mode:", optimize(C_PDF(), interval = c(input$C_Range[1], input$C_Range[2]), maximum = TRUE)$maximum)
+      tryCatch(paste("Mode:", optimize(C_PDF(), interval = c(input$C_Range[1], input$C_Range[2]), maximum = TRUE)$maximum),
+               error = function(e) print("Transcription Error"))
     }
   })
 
@@ -585,14 +597,15 @@ server <- function(input, output) {
 
     if (isolate(input$C_PDF) != "") {
       req(C_PDF())
-
-      cdf <- deparse(yac_expr(paste0("Integrate(x,", input$C_Range[1], ",x) ", noquote(isolate(input$C_PDF))))[[1]])
+      cdf <- tryCatch(deparse(yac_expr(paste0("Integrate(x,", input$C_Range[1], ",x) ", noquote(isolate(input$C_PDF))))[[1]]),
+                      error = function(e) print("Transcription Error"))
       updateTextInput(inputId = "C_CDF", value = cdf)
       CDF_FUN <- \(x) eval(parse(text = cdf))
       CDF_FUN
     } else if (isolate(input$C_PDF) == "") {
       req(input$C_CDF)
-      pdf <- deparse(yac_expr(paste0("D(x)", noquote(isolate(input$C_CDF))))[[1]])
+      pdf <- tryCatch(deparse(yac_expr(paste0("D(x)", noquote(isolate(input$C_CDF))))[[1]]),
+                      error = function(e) print("Transcription Error")) 
       updateTextInput(inputId = "C_PDF", value = pdf)
       CDF_FUN <- \(x) eval(parse(text = input$C_CDF))
       CDF_FUN
@@ -605,7 +618,8 @@ server <- function(input, output) {
 
     C_funs <- \(x) eval(parse(text = C1))
     if (!is.null(CFun())) {
-      curve(C_funs, from = input$C_Range[1], to = input$C_Range[2], ylab = "Function", main = "Original Function")
+      tryCatch(curve(C_funs, from = input$C_Range[1], to = input$C_Range[2], ylab = "Function", main = "Original Function"),
+               error = function(e) print("Transcription Error"))
     }
   })
 
@@ -615,20 +629,23 @@ server <- function(input, output) {
 
     C_pdfs <- \(x) eval(parse(text = C2))
     if (!is.null(C_PDF())) {
-      curve(C_pdfs, from = input$C_Range[1], to = input$C_Range[2], ylab = "PDF", main = "PDF")
+      tryCatch(curve(C_pdfs, from = input$C_Range[1], to = input$C_Range[2], ylab = "PDF", main = "PDF"),
+               error = function(e) print("Transcription Error"))
+               
     }
   })
 
   output$C_CDF_Plot <- renderPlot({
 
     req(input$continuous)
-    C3 <- input$C_CDF
-    if (!is.null(C_CDF())) {
-      
-      C_CDF1 <- \(x) eval(parse(text = C3))
+    req(C_CDF())
 
-      curve(C_CDF1, from = input$C_Range[1], to = input$C_Range[2], ylab = "CDF", main = "CDF")
-    }
+      
+      C_CDF1 <- \(x) eval(parse(text = input$C_CDF))
+
+      tryCatch(curve(C_CDF1, from = input$C_Range[1], to = input$C_Range[2], ylab = "CDF", main = "CDF"),
+               error = function(e) print("Transcription Error"))
+    
   })
 
 
