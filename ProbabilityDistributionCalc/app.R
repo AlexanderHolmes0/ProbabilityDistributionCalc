@@ -49,7 +49,7 @@ ui <- fluidPage(
             placeholder = "Function | Try x*(12-x)"
           ),
           textInput("D_PMF",
-            label = "Probability Mass Function (Populates if Valid PMF)",
+            label = "Probability Mass Function",
             placeholder = "PMF"
           ),
           numericRangeInput("D_Range",
@@ -356,29 +356,39 @@ ui <- fluidPage(
 server <- function(input, output) {
   DFun <- reactive({
     req(input$discrete)
-
-    shape <- isolate(input$Dfun)
-    x <- isolate(input$D_Range[1]:input$D_Range[2])
-
-    tryCatch(shape <- eval(parse(text = shape)),
+    
+    x <- input$D_Range[1]:input$D_Range[2]
+    shape <- input$Dfun
+    if(shape != ''){
+    tryCatch(shape <- ysym(shape) |> y_eval(as.r = TRUE, x = x),
              error=function(e) stop("Transcription Error"))
-   
-    list(shape = shape, x = x)
+      list(shape = shape, x = x)
+    } else{NULL}
   })
 
   D_PMF <- reactive({
-    if (is.null(input$D_PMF)) {
-      req(DFun())
-    }
-    shape <- DFun()$shape
+    x <- input$D_Range[1]:input$D_Range[2]
+    
+    if (input$D_PMF == '' & input$Dfun != '') {
+      shape <- DFun()$shape
+      
+      if (round(sum(shape), 3) == 1) {
+        updateTextInput(inputId = "D_PMF", value = input$Dfun)
+      } else if (sum(shape) != 1) {
+        shape <- shape / sum(shape)
+        
+        
+      }
+      shape 
+    } else if (input$Dfun == "" & input$D_PMF != "") {
 
-    if (round(sum(shape), 3) == 1) {
-      updateTextInput(inputId = "D_PMF", value = input$Dfun)
-    } else if (sum(shape) != 1) {
-      shape <- shape / sum(shape)
-      updateTextInput(inputId = "D_PMF", value = "Shape has been scaled")
+      shape <- ysym(input$D_PMF) |> y_eval(as.r = TRUE, x = x)
+      if (round(sum(shape), 3) != 1) {
+        shape <- shape / sum(shape)
+        
+      }
+      shape
     }
-    shape
   })
 
   D_CDF <- reactive({
@@ -390,44 +400,45 @@ server <- function(input, output) {
 
 
   output$Dmean <- renderText({
-    req(DFun()$x)
-    tryCatch(paste("Mean:", sum(DFun()$x * D_PMF())),
+    req(D_PMF())
+    tryCatch(paste("Mean:", sum(input$D_Range[1]:input$D_Range[2] * D_PMF())),
             error=function(e) print("Transcription Error"))
   })
 
   output$Dsd <- renderText({
-    req(DFun()$x)
-    mu <- sum(DFun()$x * D_PMF())
+    req(D_PMF())
+    mu <- sum(input$D_Range[1]:input$D_Range[2] * D_PMF())
              
-  paste("Standard Deviation:", sqrt(sum((DFun()$x - mu)^2 * D_PMF())))
+  paste("Standard Deviation:", sqrt(sum((input$D_Range[1]:input$D_Range[2] - mu)^2 * D_PMF())))
             
   })
 
   output$Dmode <- renderText({
-    req(DFun()$x)
-    paste("Mode:", DFun()$x[which.max(D_PMF())])
+    req(D_PMF())
+    x <- input$D_Range[1]:input$D_Range[2]
+    paste("Mode:", x[which.max(D_PMF())])
              
   })
 
 
   output$DfunPlot <- renderPlot({
     req(DFun()$shape)
-    barplot(isolate(DFun()$shape), names.arg = DFun()$x, main = "Original Function")
+    barplot(isolate(DFun()$shape), names.arg = input$D_Range[1]:input$D_Range[2], main = "Original Function")
   })
 
   output$D_PMF_Plot <- renderPlot({
     req(D_PMF())
-    barplot(D_PMF(), names.arg = DFun()$x, main = "PMF")
+    barplot(D_PMF(), names.arg = input$D_Range[1]:input$D_Range[2], main = "PMF")
   })
 
   output$D_CDF_Plot <- renderPlot({
-    req(DFun()$x)
+    req(D_CDF())
+    x <- input$D_Range[1]:input$D_Range[2]
     Fx <- D_CDF()
-    n <- length(DFun()$x)
-    x <- DFun()$x
+    n <- length(x)
     plot(
       x = NA, y = NA, pch = NA,
-      xlim = c(0, max(x)),
+      xlim = c(min(x), max(x)),
       ylim = c(0, 1),
       xlab = "x",
       ylab = "Probability",
@@ -440,7 +451,7 @@ server <- function(input, output) {
   })
 
   output$questionNum <- renderUI({
-    req(DFun()$x)
+    
     if (input$question == "Between") {
       list(
         numericRangeInput("Dquest_range",
@@ -472,26 +483,26 @@ server <- function(input, output) {
   })
 
   output$Dans <- renderPrint({
+    x <- input$D_Range[1]:input$D_Range[2]
     req(D_PMF())
-    req(DFun())
     req(input$equalTo)
     if (length(input$Dquest_range) == 2) {
       if (input$equalTo == "Inclusive") {
-        sum(D_PMF()[which(DFun()$x >= input$Dquest_range[1] & DFun()$x <= input$Dquest_range[2])])
+        sum(D_PMF()[which(x >= input$Dquest_range[1] & x <= input$Dquest_range[2])])
       } else if (input$equalTo == "Exclusive") {
-        sum(D_PMF()[which(DFun()$x > input$Dquest_range[1] & DFun()$x < input$Dquest_range[2])])
+        sum(D_PMF()[which(x > input$Dquest_range[1] & x < input$Dquest_range[2])])
       }
     } else if (input$question == "Below") {
       if (input$equalTo == "Inclusive") {
-        sum(D_PMF()[which(DFun()$x <= input$Dquest_range)])
+        sum(D_PMF()[which(x <= input$Dquest_range)])
       } else if (input$equalTo == "Exclusive") {
-        sum(D_PMF()[which(DFun()$x < input$Dquest_range)])
+        sum(D_PMF()[which(x < input$Dquest_range)])
       }
     } else if (input$question == "Above") {
       if (input$equalTo == "Inclusive") {
-        sum(D_PMF()[which(DFun()$x >= input$Dquest_range)])
+        sum(D_PMF()[which(x >= input$Dquest_range)])
       } else if (input$equalTo == "Exclusive") {
-        sum(D_PMF()[which(DFun()$x > input$Dquest_range)])
+        sum(D_PMF()[which(x > input$Dquest_range)])
       }
     }
   })
@@ -529,9 +540,9 @@ server <- function(input, output) {
 
   CFun <- reactive({
     req(input$continuous)
-    C_Fun <- isolate(input$C_Fun)
-    if (C_Fun != "") {
-      \(x) eval(parse(text = C_Fun))
+
+    if (input$C_Fun != "") {
+      \(x){ ysym(input$C_Fun) |> y_eval(as.r = TRUE, x=x)}
     } else {
       NULL
     }
@@ -539,10 +550,9 @@ server <- function(input, output) {
 
   C_PDF <- reactive({
     req(input$continuous)
-
     C_PDF <- isolate(input$C_PDF)
     if (C_PDF != "") {
-      \(x) eval(parse(text = C_PDF))
+      \(x) ysym(C_PDF) |> y_eval(as.r = TRUE, x=x)
     } else {
       NULL
     }
@@ -552,7 +562,7 @@ server <- function(input, output) {
     req(input$continuous)
     if (!is.null(CFun())) {
      tryCatch( paste("Area Under Original Curve:", integrate(CFun(), input$C_Range[1], input$C_Range[2])$val),
-               error = function(e) print("Transcription Error"))
+               error = function(e) print("Transcription Errors"))
     }
   })
 
@@ -568,7 +578,7 @@ server <- function(input, output) {
     req(input$continuous)
     if (!is.null(C_PDF())) {
       C_PDF <- isolate(input$C_PDF)
-      tryCatch(paste("Mean:", integrate(\(x) x * eval(parse(text = C_PDF)), input$C_Range[1], input$C_Range[2])$val),
+      tryCatch(paste("Mean:", integrate(\(x) x * C_PDF()(x), input$C_Range[1], input$C_Range[2])$val),
                error = function(e) print("Transcription Error"))
     }
   })
